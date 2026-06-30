@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campeonato Brasileiro de Kettlebell Sport</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page-shell">
+    <section class="hero" aria-label="Escolha uma coleção">
+      <div class="hero-actions">
+        <button class="intro-card intro-card--blue" type="button" data-view="azul" aria-label="Ver artes azuis">
+          <img src="assets/intro/azul_intro_image1.webp" alt="">
+          <span>Artes azuis</span>
+        </button>
+
+        <button class="kettlebell-button" type="button" data-view="todos" aria-label="Ver todas as artes">
+          <img src="assets/todos_kettlebell.webp" alt="">
+          <span>Todas</span>
+        </button>
+
+        <button class="intro-card intro-card--black" type="button" data-view="preto" aria-label="Ver artes pretas">
+          <img src="assets/intro/preto_intro_image1-76.webp" alt="">
+          <span>Artes pretas</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="gallery-panel" id="galeria" hidden>
+      <div class="gallery-sidebar">
+        <div class="gallery-head">
+          <div>
+            <p class="eyebrow">Galeria</p>
+            <h1 id="galleryTitle">Artes</h1>
+          </div>
+          <button class="close-gallery" type="button" id="closeGallery">Voltar</button>
+        </div>
+
+        <div class="filters" aria-label="Filtros da galeria">
+          <fieldset>
+            <legend>Tipo</legend>
+            <div class="chip-row" data-filter-group="type"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Gênero</legend>
+            <div class="chip-row" data-filter-group="gender"></div>
+          </fieldset>
+          <fieldset>
+            <legend>Posição</legend>
+            <div class="chip-row" data-filter-group="position"></div>
+          </fieldset>
+        </div>
+
+        <button class="compare-toggle" type="button" id="compareToggle" aria-label="Comparar imagens" aria-pressed="false">
+          <img src="assets/compare-icon.svg" alt="">
+          <span>Comparar</span>
+        </button>
+
+        <div class="active-summary" id="activeSummary"></div>
+      </div>
+
+      <div class="gallery-area">
+        <div class="compare-message" id="compareMessage" hidden>Escolha até 4 imagens para comparar.</div>
+        <div class="gallery-grid" id="galleryGrid"></div>
+        <button class="compare-run" type="button" id="compareRun" hidden>Comparar</button>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="image-modal" id="imageModal" aria-label="Visualização ampliada">
+    <div class="modal-toolbar">
+      <strong id="modalTitle">Imagem</strong>
+      <div class="modal-actions">
+        <button type="button" id="zoomOut" aria-label="Diminuir zoom">-</button>
+        <button type="button" id="zoomReset" aria-label="Resetar zoom">100%</button>
+        <button type="button" id="zoomIn" aria-label="Aumentar zoom">+</button>
+        <button type="button" id="modalClose" aria-label="Fechar">Fechar</button>
+      </div>
+    </div>
+    <div class="modal-stage" id="modalStage">
+      <img id="modalImage" alt="">
+    </div>
+  </dialog>
+
+  <dialog class="compare-modal" id="compareModal" aria-label="Comparação de imagens">
+    <div class="compare-toolbar">
+      <strong>Comparação</strong>
+      <button type="button" id="compareClose">Fechar</button>
+    </div>
+    <div class="compare-stage" id="compareStage"></div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
