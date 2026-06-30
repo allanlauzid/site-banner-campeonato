@@ -388,6 +388,16 @@ modalStage.addEventListener("wheel", (event) => {
 }, { passive: false });
 
 window.addEventListener("keydown", (event) => {
+  if (modal.open && event.key === "ArrowLeft") {
+    event.preventDefault();
+    moveModal(-1);
+    return;
+  }
+  if (modal.open && event.key === "ArrowRight") {
+    event.preventDefault();
+    moveModal(1);
+    return;
+  }
   if (event.key === "Escape" && modal.open) modal.close();
 });
 
