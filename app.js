@@ -73,6 +73,8 @@ const modal = document.querySelector("#imageModal");
 const modalTitle = document.querySelector("#modalTitle");
 const modalImage = document.querySelector("#modalImage");
 const modalStage = document.querySelector("#modalStage");
+const modalPrev = document.querySelector("#modalPrev");
+const modalNext = document.querySelector("#modalNext");
 const compareToggle = document.querySelector("#compareToggle");
 const compareMessage = document.querySelector("#compareMessage");
 const compareRun = document.querySelector("#compareRun");
@@ -85,6 +87,8 @@ let offsetX = 0;
 let offsetY = 0;
 let dragging = false;
 let dragStart = { x: 0, y: 0, offsetX: 0, offsetY: 0 };
+let modalItems = [];
+let modalIndex = 0;
 
 function parseItem(color, file) {
   const match = file.match(/^(azul|preto)_([a-d])(\d)/i);
@@ -222,11 +226,14 @@ function createCard(item) {
   const label = document.createElement("span");
   label.textContent = item.label;
 
-  const selectMark = document.createElement("span");
-  selectMark.className = "select-mark";
-  selectMark.textContent = state.selected.has(item.file) ? "✓" : "";
-
-  card.append(image, selectMark, label);
+  card.append(image);
+  if (state.compareMode) {
+    const selectMark = document.createElement("span");
+    selectMark.className = "select-mark";
+    selectMark.textContent = state.selected.has(item.file) ? "✓" : "";
+    card.appendChild(selectMark);
+  }
+  card.appendChild(label);
   card.addEventListener("click", () => {
     if (state.compareMode) {
       toggleSelection(item);
@@ -286,6 +293,13 @@ function openCompareModal() {
 }
 
 function openModal(item) {
+  modalItems = getVisibleItems();
+  modalIndex = Math.max(0, modalItems.findIndex((visibleItem) => visibleItem.file === item.file));
+  showModalItem(modalItems[modalIndex] || item);
+  modal.showModal();
+}
+
+function showModalItem(item) {
   zoom = 1;
   offsetX = 0;
   offsetY = 0;
@@ -293,7 +307,18 @@ function openModal(item) {
   modalImage.src = item.full;
   modalImage.alt = item.label;
   applyTransform();
-  modal.showModal();
+  updateModalNav();
+}
+
+function updateModalNav() {
+  modalPrev.disabled = modalItems.length < 2;
+  modalNext.disabled = modalItems.length < 2;
+}
+
+function moveModal(direction) {
+  if (modalItems.length < 2) return;
+  modalIndex = (modalIndex + direction + modalItems.length) % modalItems.length;
+  showModalItem(modalItems[modalIndex]);
 }
 
 function applyTransform() {
@@ -331,11 +356,14 @@ compareToggle.addEventListener("click", toggleCompareMode);
 compareRun.addEventListener("click", openCompareModal);
 document.querySelector("#compareClose").addEventListener("click", () => compareModal.close());
 document.querySelector("#modalClose").addEventListener("click", () => modal.close());
+modalPrev.addEventListener("click", () => moveModal(-1));
+modalNext.addEventListener("click", () => moveModal(1));
 document.querySelector("#zoomIn").addEventListener("click", () => changeZoom(0.2));
 document.querySelector("#zoomOut").addEventListener("click", () => changeZoom(-0.2));
 document.querySelector("#zoomReset").addEventListener("click", resetZoom);
 
 modalStage.addEventListener("pointerdown", (event) => {
+  if (event.target.closest(".modal-nav")) return;
   dragging = true;
   modalStage.setPointerCapture(event.pointerId);
   modalStage.classList.add("is-dragging");
