@@ -164,11 +164,35 @@ body.gallery-open .hero-actions {
 
 .gallery-sidebar {
   position: absolute;
+  z-index: 3;
   top: 0;
   left: 0;
   width: clamp(330px, 22vw, 410px);
   min-width: 0;
+  padding: 14px;
   overflow: hidden;
+  border-radius: 8px;
+  background: rgba(240, 191, 45, 0.8);
+  box-shadow: 0 16px 34px rgba(16, 33, 61, 0.2);
+  outline: 1px solid rgba(16, 33, 61, 0.12);
+}
+
+.gallery-sidebar::after {
+  content: "›";
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 20px;
+  height: 82%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  border-right: 2px solid var(--gold);
+  color: var(--gold);
+  font-size: 30px;
+  font-weight: 900;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .gallery-head {
@@ -199,8 +223,10 @@ h1 {
 
 .close-gallery {
   position: absolute;
+  z-index: 5;
   top: 0;
-  right: 0;
+  left: 0;
+  right: auto;
   min-height: 42px;
   padding: 0 18px;
   border-radius: 999px;
@@ -316,6 +342,7 @@ legend {
 
 .gallery-area {
   position: absolute;
+  z-index: 1;
   top: 0;
   left: 50%;
   width: min(760px, calc(100vw - 560px));
@@ -325,12 +352,13 @@ legend {
 }
 
 .compare-message {
+  position: relative;
   width: 100%;
   margin: 0 0 10px;
-  padding: 8px 12px;
+  padding: 8px 128px 8px 12px;
   border-radius: 999px;
   color: var(--ink);
-  background: rgba(255, 250, 238, 0.74);
+  background: #fff7e4;
   font-weight: 900;
   text-align: center;
   box-shadow: 0 8px 18px rgba(16, 33, 61, 0.1);
@@ -466,9 +494,9 @@ body.compare-mode .select-mark {
 }
 
 .compare-run {
-  position: fixed;
-  top: clamp(118px, 17vh, 178px);
-  right: clamp(18px, 2.2vw, 42px);
+  position: absolute;
+  top: 50%;
+  right: 6px;
   min-height: 44px;
   padding: 0 20px;
   border: 0;
@@ -478,6 +506,7 @@ body.compare-mode .select-mark {
   font-weight: 900;
   box-shadow: 0 14px 28px rgba(16, 33, 61, 0.24);
   cursor: pointer;
+  transform: translateY(-50%);
 }
 
 .compare-run:disabled {
@@ -561,7 +590,7 @@ body.compare-mode .select-mark {
 .modal-nav {
   position: absolute;
   z-index: 2;
-  top: 50%;
+  bottom: 18px;
   width: 54px;
   height: 74px;
   border: 0;
@@ -572,14 +601,14 @@ body.compare-mode .select-mark {
   font-weight: 400;
   line-height: 1;
   cursor: pointer;
-  transform: translateY(-50%);
+  transform: none;
   transition: background 150ms ease, transform 150ms ease, opacity 150ms ease;
 }
 
 .modal-nav:hover,
 .modal-nav:focus-visible {
   background: rgba(5, 22, 48, 0.58);
-  transform: translateY(-50%) scale(1.04);
+  transform: scale(1.04);
 }
 
 .modal-nav:disabled {
@@ -588,11 +617,12 @@ body.compare-mode .select-mark {
 }
 
 .modal-nav--prev {
-  left: 16px;
+  left: calc(50% - 66px);
 }
 
 .modal-nav--next {
-  right: 16px;
+  left: calc(50% + 12px);
+  right: auto;
 }
 
 .compare-modal {
@@ -620,6 +650,12 @@ body.compare-mode .select-mark {
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 
+.compare-toolbar-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .compare-toolbar strong {
   font-size: 24px;
   text-transform: uppercase;
@@ -644,25 +680,73 @@ body.compare-mode .select-mark {
   padding: 14px;
 }
 
+.compare-loading {
+  position: fixed;
+  z-index: 4;
+  inset: 62px 0 auto;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: white;
+  background: rgba(6, 17, 36, 0.82);
+}
+
+.compare-loading[hidden] {
+  display: none;
+}
+
+.compare-loading span {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.24);
+  border-top-color: var(--gold);
+  animation: spin 780ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .compare-stage figure {
+  position: relative;
   min-width: 0;
   min-height: 0;
   margin: 0;
-  display: grid;
-  grid-template-rows: 1fr auto;
   overflow: hidden;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
+  touch-action: none;
+  cursor: grab;
+}
+
+.compare-stage figure.is-dragging {
+  cursor: grabbing;
 }
 
 .compare-stage img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 42px);
   object-fit: contain;
   min-height: 0;
+  transform: translate(calc(-50% + var(--x, 0px)), calc(-50% + var(--y, 0px))) scale(var(--zoom, 1));
+  transform-origin: center;
+  user-select: none;
+  pointer-events: none;
 }
 
 .compare-stage figcaption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   padding: 10px;
   color: white;
   font-size: 18px;
@@ -732,13 +816,98 @@ body.compare-mode .select-mark {
   }
 
   .compare-run {
-    top: auto;
-    right: 16px;
-    bottom: 16px;
+    top: 50%;
+    right: 6px;
+    bottom: auto;
   }
 
   .cards {
     grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  }
+}
+
+@media (max-width: 1280px) and (min-width: 841px) {
+  .gallery-panel {
+    top: 64px;
+    left: 18px;
+    right: 18px;
+    height: min(52svh, 470px);
+  }
+
+.gallery-sidebar {
+    width: 360px;
+    min-height: 310px;
+    padding: 68px 14px 14px;
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+    outline: 0;
+    transform: translateX(-342px);
+    transition: transform 0.85s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.85s ease, box-shadow 0.85s ease;
+  }
+
+  .gallery-sidebar::after {
+    display: flex;
+    right: -2px;
+    border-right-color: var(--gold);
+  }
+
+  .gallery-sidebar:hover,
+  .gallery-sidebar:focus-within {
+    transform: translateX(0);
+  background: rgba(240, 191, 45, 0.8);
+    box-shadow: 0 16px 34px rgba(16, 33, 61, 0.2);
+    outline: 1px solid rgba(16, 33, 61, 0.12);
+  }
+
+  .gallery-sidebar:hover::after,
+  .gallery-sidebar:focus-within::after {
+    opacity: 0;
+  }
+
+  .gallery-head {
+    margin: 0;
+  }
+
+  .gallery-head > div,
+  .filters,
+  .compare-toggle,
+  .active-summary {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 160ms ease 70ms;
+  }
+
+  .gallery-sidebar:hover .gallery-head > div,
+  .gallery-sidebar:focus-within .gallery-head > div,
+  .gallery-sidebar:hover .filters,
+  .gallery-sidebar:focus-within .filters,
+  .gallery-sidebar:hover .compare-toggle,
+  .gallery-sidebar:focus-within .compare-toggle,
+  .gallery-sidebar:hover .active-summary,
+  .gallery-sidebar:focus-within .active-summary {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .close-gallery {
+    top: 0;
+    left: 0;
+    right: auto;
+    transform: none;
+  }
+
+  .compare-toggle {
+    margin-top: 18px;
+  }
+
+  .gallery-area {
+    width: min(720px, calc(100vw - 260px));
+    min-width: 600px;
+  }
+
+  .cards {
+    grid-template-columns: repeat(5, minmax(104px, 1fr));
   }
 }
 

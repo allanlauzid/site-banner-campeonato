@@ -28,13 +28,13 @@
     </section>
 
     <section class="gallery-panel" id="galeria" hidden>
+      <button class="close-gallery" type="button" id="closeGallery">Voltar</button>
       <div class="gallery-sidebar">
         <div class="gallery-head">
           <div>
             <p class="eyebrow">Galeria</p>
             <h1 id="galleryTitle">Artes</h1>
           </div>
-          <button class="close-gallery" type="button" id="closeGallery">Voltar</button>
         </div>
 
         <div class="filters" aria-label="Filtros da galeria">
@@ -61,9 +61,11 @@
       </div>
 
       <div class="gallery-area">
-        <div class="compare-message" id="compareMessage" hidden>Escolha até 4 imagens para comparar.</div>
+        <div class="compare-message" id="compareMessage" hidden>
+          <span id="compareMessageText">Escolha até 4 imagens para comparar.</span>
+          <button class="compare-run" type="button" id="compareRun" hidden>Comparar</button>
+        </div>
         <div class="gallery-grid" id="galleryGrid"></div>
-        <button class="compare-run" type="button" id="compareRun" hidden>Comparar</button>
       </div>
     </section>
   </main>
@@ -75,20 +77,28 @@
         <button type="button" id="zoomOut" aria-label="Diminuir zoom">-</button>
         <button type="button" id="zoomReset" aria-label="Resetar zoom">100%</button>
         <button type="button" id="zoomIn" aria-label="Aumentar zoom">+</button>
+        <button type="button" id="modalCompare">Comparar</button>
         <button type="button" id="modalClose" aria-label="Fechar">Fechar</button>
       </div>
     </div>
     <div class="modal-stage" id="modalStage">
-      <button class="modal-nav modal-nav--prev" type="button" id="modalPrev" aria-label="Imagem anterior">‹</button>
+      <button class="modal-nav modal-nav--prev" type="button" id="modalPrev" aria-label="Imagem anterior">&lsaquo;</button>
       <img id="modalImage" alt="">
-      <button class="modal-nav modal-nav--next" type="button" id="modalNext" aria-label="Próxima imagem">›</button>
+      <button class="modal-nav modal-nav--next" type="button" id="modalNext" aria-label="Próxima imagem">&rsaquo;</button>
     </div>
   </dialog>
 
   <dialog class="compare-modal" id="compareModal" aria-label="Comparação de imagens">
     <div class="compare-toolbar">
       <strong>Comparação</strong>
-      <button type="button" id="compareClose">Fechar</button>
+      <div class="compare-toolbar-actions">
+        <button type="button" id="compareHd">HD</button>
+        <button type="button" id="compareClose">Fechar</button>
+      </div>
+    </div>
+    <div class="compare-loading" id="compareLoading" hidden aria-live="polite">
+      <span></span>
+      <strong>Carregando HD</strong>
     </div>
     <div class="compare-stage" id="compareStage"></div>
   </dialog>

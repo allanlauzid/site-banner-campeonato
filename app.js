@@ -75,20 +75,20 @@ const modalImage = document.querySelector("#modalImage");
 const modalStage = document.querySelector("#modalStage");
 const modalPrev = document.querySelector("#modalPrev");
 const modalNext = document.querySelector("#modalNext");
+const modalCompare = document.querySelector("#modalCompare");
 const compareToggle = document.querySelector("#compareToggle");
 const compareMessage = document.querySelector("#compareMessage");
+const compareMessageText = document.querySelector("#compareMessageText");
 const compareRun = document.querySelector("#compareRun");
 const galleryArea = document.querySelector(".gallery-area");
 const compareModal = document.querySelector("#compareModal");
 const compareStage = document.querySelector("#compareStage");
+const compareHd = document.querySelector("#compareHd");
+const compareLoading = document.querySelector("#compareLoading");
 
-let zoom = 1;
-let offsetX = 0;
-let offsetY = 0;
-let dragging = false;
-let dragStart = { x: 0, y: 0, offsetX: 0, offsetY: 0 };
 let modalItems = [];
 let modalIndex = 0;
+let modalPan;
 
 function parseItem(color, file) {
   const match = file.match(/^(azul|preto)_([a-d])(\d)/i);
@@ -250,13 +250,19 @@ function toggleCompareMode() {
   render();
 }
 
+function deactivateCompareMode() {
+  state.compareMode = false;
+  state.selected.clear();
+  render();
+}
+
 function toggleSelection(item) {
   if (state.selected.has(item.file)) {
     state.selected.delete(item.file);
   } else if (state.selected.size < 4) {
     state.selected.add(item.file);
   } else {
-    compareMessage.textContent = "Limite de 4 imagens para comparar.";
+    compareMessageText.textContent = "Limite de 4 imagens para comparar.";
     return;
   }
   render();
@@ -270,26 +276,51 @@ function syncCompareUi() {
   compareMessage.hidden = !state.compareMode;
   compareRun.hidden = !state.compareMode;
   compareRun.disabled = state.selected.size < 2;
-  compareMessage.textContent = state.selected.size
+  compareMessageText.textContent = state.selected.size
     ? `${state.selected.size}/4 selecionada(s). Escolha até 4 imagens para comparar.`
     : "Escolha até 4 imagens para comparar.";
 }
 
-function openCompareModal() {
+function openCompareModal(useHd = false) {
   const selectedItems = items.filter((item) => state.selected.has(item.file));
   if (selectedItems.length < 2) return;
+  compareHd.disabled = useHd;
   compareStage.innerHTML = "";
   selectedItems.forEach((item) => {
     const figure = document.createElement("figure");
     const image = document.createElement("img");
-    image.src = item.full;
+    image.src = useHd ? item.full : item.thumb;
+    image.dataset.full = item.full;
     image.alt = item.label;
     const caption = document.createElement("figcaption");
     caption.textContent = item.label;
     figure.append(image, caption);
     compareStage.appendChild(figure);
+    createZoomPan(figure, image);
   });
   compareModal.showModal();
+}
+
+async function loadCompareHd() {
+  const images = [...compareStage.querySelectorAll("img")];
+  if (!images.length) return;
+  compareLoading.hidden = false;
+  compareHd.disabled = true;
+  await Promise.all(images.map((image) => new Promise((resolve) => {
+    const full = image.dataset.full;
+    if (!full || image.src.endsWith(full)) {
+      resolve();
+      return;
+    }
+    const loader = new Image();
+    loader.onload = () => {
+      image.src = full;
+      resolve();
+    };
+    loader.onerror = resolve;
+    loader.src = full;
+  })));
+  compareLoading.hidden = true;
 }
 
 function openModal(item) {
@@ -300,19 +331,17 @@ function openModal(item) {
 }
 
 function showModalItem(item) {
-  zoom = 1;
-  offsetX = 0;
-  offsetY = 0;
   modalTitle.textContent = item.label;
   modalImage.src = item.full;
   modalImage.alt = item.label;
-  applyTransform();
+  modalPan.reset();
   updateModalNav();
 }
 
 function updateModalNav() {
-  modalPrev.disabled = modalItems.length < 2;
-  modalNext.disabled = modalItems.length < 2;
+  const hasNavigation = modalItems.length > 1;
+  modalPrev.disabled = !hasNavigation;
+  modalNext.disabled = !hasNavigation;
 }
 
 function moveModal(direction) {
@@ -321,22 +350,132 @@ function moveModal(direction) {
   showModalItem(modalItems[modalIndex]);
 }
 
-function applyTransform() {
-  modalImage.style.setProperty("--zoom", zoom);
-  modalImage.style.setProperty("--x", `${offsetX}px`);
-  modalImage.style.setProperty("--y", `${offsetY}px`);
+function compareFromModal() {
+  const item = modalItems[modalIndex];
+  if (!item) return;
+  modal.close();
+  state.compareMode = true;
+  state.selected.clear();
+  state.selected.add(item.file);
+  render();
 }
 
-function changeZoom(delta) {
-  zoom = Math.min(4, Math.max(0.6, Number((zoom + delta).toFixed(2))));
-  applyTransform();
-}
+function createZoomPan(stage, image) {
+  const pan = {
+    zoom: 1,
+    x: 0,
+    y: 0,
+    pointers: new Map(),
+    start: null
+  };
 
-function resetZoom() {
-  zoom = 1;
-  offsetX = 0;
-  offsetY = 0;
-  applyTransform();
+  function apply() {
+    image.style.setProperty("--zoom", pan.zoom);
+    image.style.setProperty("--x", `${pan.x}px`);
+    image.style.setProperty("--y", `${pan.y}px`);
+  }
+
+  function reset() {
+    pan.zoom = 1;
+    pan.x = 0;
+    pan.y = 0;
+    pan.pointers.clear();
+    pan.start = null;
+    stage.classList.remove("is-dragging");
+    apply();
+  }
+
+  function distance(a, b) {
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  function center(a, b) {
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+
+  function points() {
+    return [...pan.pointers.values()];
+  }
+
+  stage.addEventListener("pointerdown", (event) => {
+    if (event.target.closest("button")) return;
+    stage.setPointerCapture(event.pointerId);
+    pan.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    stage.classList.add("is-dragging");
+
+    const active = points();
+    if (active.length === 1) {
+      pan.start = { mode: "drag", x: event.clientX, y: event.clientY, offsetX: pan.x, offsetY: pan.y };
+    } else if (active.length === 2) {
+      const initialCenter = center(active[0], active[1]);
+      pan.start = {
+        mode: "pinch",
+        distance: distance(active[0], active[1]),
+        center: initialCenter,
+        zoom: pan.zoom,
+        offsetX: pan.x,
+        offsetY: pan.y
+      };
+    }
+  });
+
+  stage.addEventListener("pointermove", (event) => {
+    if (!pan.pointers.has(event.pointerId)) return;
+    pan.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const active = points();
+
+    if (active.length === 2) {
+      const currentCenter = center(active[0], active[1]);
+      if (!pan.start || pan.start.mode !== "pinch") {
+        pan.start = {
+          mode: "pinch",
+          distance: distance(active[0], active[1]),
+          center: currentCenter,
+          zoom: pan.zoom,
+          offsetX: pan.x,
+          offsetY: pan.y
+        };
+      }
+      const ratio = distance(active[0], active[1]) / Math.max(1, pan.start.distance);
+      pan.zoom = Math.min(4, Math.max(0.6, Number((pan.start.zoom * ratio).toFixed(3))));
+      pan.x = pan.start.offsetX + currentCenter.x - pan.start.center.x;
+      pan.y = pan.start.offsetY + currentCenter.y - pan.start.center.y;
+      apply();
+      return;
+    }
+
+    if (active.length === 1 && pan.start?.mode === "drag") {
+      pan.x = pan.start.offsetX + event.clientX - pan.start.x;
+      pan.y = pan.start.offsetY + event.clientY - pan.start.y;
+      apply();
+    }
+  });
+
+  function endPointer(event) {
+    pan.pointers.delete(event.pointerId);
+    const active = points();
+    if (!active.length) {
+      stage.classList.remove("is-dragging");
+      pan.start = null;
+    } else if (active.length === 1) {
+      pan.start = { mode: "drag", x: active[0].x, y: active[0].y, offsetX: pan.x, offsetY: pan.y };
+    }
+  }
+
+  stage.addEventListener("pointerup", endPointer);
+  stage.addEventListener("pointercancel", endPointer);
+
+  stage.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    zoomBy(event.deltaY < 0 ? 0.12 : -0.12);
+  }, { passive: false });
+
+  function zoomBy(delta) {
+    pan.zoom = Math.min(4, Math.max(0.6, Number((pan.zoom + delta).toFixed(2))));
+    apply();
+  }
+
+  return { reset, apply, zoomBy };
 }
 
 document.querySelectorAll("[data-view]").forEach((button) => {
@@ -344,48 +483,34 @@ document.querySelectorAll("[data-view]").forEach((button) => {
 });
 
 document.querySelector("#closeGallery").addEventListener("click", () => {
+  if (state.compareMode) {
+    deactivateCompareMode();
+    return;
+  }
   gallery.hidden = true;
-  state.compareMode = false;
-  state.selected.clear();
-  syncCompareUi();
   document.body.classList.remove("gallery-open");
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
 compareToggle.addEventListener("click", toggleCompareMode);
-compareRun.addEventListener("click", openCompareModal);
+compareRun.addEventListener("click", () => openCompareModal(false));
+modalCompare.addEventListener("click", compareFromModal);
+compareHd.addEventListener("click", loadCompareHd);
 document.querySelector("#compareClose").addEventListener("click", () => compareModal.close());
 document.querySelector("#modalClose").addEventListener("click", () => modal.close());
-modalPrev.addEventListener("click", () => moveModal(-1));
-modalNext.addEventListener("click", () => moveModal(1));
-document.querySelector("#zoomIn").addEventListener("click", () => changeZoom(0.2));
-document.querySelector("#zoomOut").addEventListener("click", () => changeZoom(-0.2));
-document.querySelector("#zoomReset").addEventListener("click", resetZoom);
-
-modalStage.addEventListener("pointerdown", (event) => {
-  if (event.target.closest(".modal-nav")) return;
-  dragging = true;
-  modalStage.setPointerCapture(event.pointerId);
-  modalStage.classList.add("is-dragging");
-  dragStart = { x: event.clientX, y: event.clientY, offsetX, offsetY };
+modalPrev.addEventListener("pointerdown", (event) => event.stopPropagation());
+modalNext.addEventListener("pointerdown", (event) => event.stopPropagation());
+modalPrev.addEventListener("click", (event) => {
+  event.stopPropagation();
+  moveModal(-1);
 });
-
-modalStage.addEventListener("pointermove", (event) => {
-  if (!dragging) return;
-  offsetX = dragStart.offsetX + event.clientX - dragStart.x;
-  offsetY = dragStart.offsetY + event.clientY - dragStart.y;
-  applyTransform();
+modalNext.addEventListener("click", (event) => {
+  event.stopPropagation();
+  moveModal(1);
 });
-
-modalStage.addEventListener("pointerup", () => {
-  dragging = false;
-  modalStage.classList.remove("is-dragging");
-});
-
-modalStage.addEventListener("wheel", (event) => {
-  event.preventDefault();
-  changeZoom(event.deltaY < 0 ? 0.12 : -0.12);
-}, { passive: false });
+document.querySelector("#zoomIn").addEventListener("click", () => modalPan.zoomBy(0.2));
+document.querySelector("#zoomOut").addEventListener("click", () => modalPan.zoomBy(-0.2));
+document.querySelector("#zoomReset").addEventListener("click", () => modalPan.reset());
 
 window.addEventListener("keydown", (event) => {
   if (modal.open && event.key === "ArrowLeft") {
@@ -398,7 +523,15 @@ window.addEventListener("keydown", (event) => {
     moveModal(1);
     return;
   }
-  if (event.key === "Escape" && modal.open) modal.close();
+  if (event.key === "Escape" && modal.open) {
+    modal.close();
+    return;
+  }
+  if (event.key === "Escape" && state.compareMode) {
+    event.preventDefault();
+    deactivateCompareMode();
+  }
 });
 
+modalPan = createZoomPan(modalStage, modalImage);
 setupFilters();
